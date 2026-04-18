@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gem Sorter - Robotic Arm Challenge</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/blocks.css">
+  <link rel="stylesheet" href="css/themes.css">
+</head>
+<body>
+  <header id="header">
+    <div class="header-left">
+      <h1 id="level-title">Level 1</h1>
+      <button id="btn-help" class="btn-help" title="How to Play">?</button>
+    </div>
+    <div class="header-center">
+      <div id="score-display">
+        <span id="score-correct">0</span> sorted &middot;
+        <span id="score-missed">0</span> missed
+      </div>
+      <div id="star-display">
+        <span class="star">&#9734;</span>
+        <span class="star">&#9734;</span>
+        <span class="star">&#9734;</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="gems-remaining"></span>
+    </div>
+  </header>
+
+  <main id="game-container">
+    <div id="canvas-wrapper">
+      <canvas id="game-canvas"></canvas>
+    </div>
+    <div id="workspace-wrapper">
+      <div id="workspace">
+        <div class="workspace-label">TOOLBOX — drag blocks from here</div>
+        <div id="palette"></div>
+        <div class="workspace-label program-label">YOUR PROGRAM — drop blocks below</div>
+        <div id="program-area" class="empty">
+          <p class="program-hint">
+            Start with REPEAT, then add IF, PICK, and PLACE blocks
+          </p>
+        </div>
+        <div id="controls">
+          <button id="btn-run" class="btn btn-run">&#9654; Run</button>
+          <button id="btn-stop" class="btn btn-stop" disabled>&#9724; Stop</button>
+          <button id="btn-clear" class="btn btn-clear">&#10005; Clear</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div id="modal" class="modal">
+      <h2 id="modal-title"></h2>
+      <div id="modal-description"></div>
+      <div id="modal-stars" class="modal-stars"></div>
+      <div id="modal-actions"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
