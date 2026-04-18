@@ -20,5 +20,6 @@ export class Gem {
     this.y = 0;
     this.state = 'on_belt';
     this.opacity = 1;
+    this.skipped = false;
   }
 }

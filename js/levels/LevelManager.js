@@ -6,21 +6,25 @@ const ALL_COLORS = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
 
 export class LevelManager {
   constructor() {
-    this.currentLevelIndex = 0;
+    this.currentLevelIndex = -1;
     this.currentLevel = null;
+    this._cachedGeneration = null;
   }
 
-  loadLevel(index, canvasWidth, canvasHeight) {
-    this.currentLevelIndex = index;
+  loadLevel(index, canvasWidth, canvasHeight, { regenerate = true } = {}) {
     const baseLevel = levels[index];
     if (!baseLevel) return null;
 
-    const gemTypes = this._randomizeGemTypes(baseLevel);
-    this.currentLevel = { ...baseLevel, gemTypes };
+    if (regenerate || index !== this.currentLevelIndex || !this._cachedGeneration) {
+      this._cachedGeneration = this._generateGemTypesAndSlots(baseLevel);
+    }
+
+    this.currentLevelIndex = index;
+    const { gemTypes, slotConfigs } = this._cachedGeneration;
+    this.currentLevel = { ...baseLevel, gemTypes, slots: slotConfigs };
 
     document.body.className = `theme-${this.currentLevel.theme}`;
 
-    const slotConfigs = this.currentLevel.slots;
     const totalSlots = slotConfigs.length;
     const slotWidth = 70;
     const gap = 20;
@@ -50,27 +54,85 @@ export class LevelManager {
     };
   }
 
-  _randomizeGemTypes(level) {
-    const sortsByColor = level.slots.every(s => s.acceptColor && !s.acceptShape);
-    const sortsByShape = level.slots.every(s => s.acceptShape && !s.acceptColor);
+  _generateGemTypesAndSlots(level) {
+    const colors = this._shuffle([...ALL_COLORS]);
+    const shapes = this._shuffle([...GEM_SHAPES]);
+    const gemTypes = [];
+    const slotConfigs = [];
 
-    if (sortsByColor) {
-      const shuffledShapes = this._shuffle([...GEM_SHAPES]);
-      return level.gemTypes.map((gt, i) => ({
-        ...gt,
-        shape: shuffledShapes[i % shuffledShapes.length],
-      }));
+    switch (level.sortBy) {
+      case 'color': {
+        for (let i = 0; i < level.numSlots; i++) {
+          gemTypes.push({ color: colors[i], shape: shapes[i], weight: level.gemWeight });
+          slotConfigs.push({
+            id: i,
+            label: `${this._cap(colors[i])} ${this._cap(shapes[i])}`,
+            acceptColor: colors[i],
+            acceptShape: shapes[i],
+          });
+        }
+        for (let i = 0; i < level.numDistractors; i++) {
+          gemTypes.push({
+            color: colors[level.numSlots + i],
+            shape: shapes[(level.numSlots + i) % shapes.length],
+            weight: level.distractorWeight,
+          });
+        }
+        break;
+      }
+
+      case 'shape': {
+        const singleColor = colors[0];
+        for (let i = 0; i < level.numSlots; i++) {
+          gemTypes.push({ color: singleColor, shape: shapes[i], weight: level.gemWeight });
+          slotConfigs.push({
+            id: i,
+            label: this._cap(shapes[i]) + 's',
+            acceptColor: null,
+            acceptShape: shapes[i],
+          });
+        }
+        for (let i = 0; i < level.numDistractors; i++) {
+          gemTypes.push({
+            color: singleColor,
+            shape: shapes[(level.numSlots + i) % shapes.length],
+            weight: level.distractorWeight,
+          });
+        }
+        break;
+      }
+
+      case 'color_and_shape': {
+        for (let i = 0; i < level.numSlots; i++) {
+          gemTypes.push({ color: colors[i], shape: shapes[i], weight: level.gemWeight });
+          slotConfigs.push({
+            id: i,
+            label: `${this._cap(colors[i])} ${this._cap(shapes[i])}`,
+            acceptColor: colors[i],
+            acceptShape: shapes[i],
+          });
+        }
+        const distractorPool = [];
+        for (let ci = 0; ci < level.numSlots; ci++) {
+          for (let si = 0; si < level.numSlots; si++) {
+            if (ci !== si) {
+              distractorPool.push({ color: colors[ci], shape: shapes[si] });
+            }
+          }
+        }
+        const shuffledDistractors = this._shuffle(distractorPool);
+        for (let i = 0; i < Math.min(level.numDistractors, shuffledDistractors.length); i++) {
+          gemTypes.push({ ...shuffledDistractors[i], weight: level.distractorWeight });
+        }
+        break;
+      }
     }
 
-    if (sortsByShape) {
-      const shuffledColors = this._shuffle([...ALL_COLORS]);
-      return level.gemTypes.map((gt, i) => ({
-        ...gt,
-        color: shuffledColors[i % shuffledColors.length],
-      }));
-    }
+    return { gemTypes, slotConfigs };
+  }
 
-    return level.gemTypes;
+  _cap(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   _shuffle(arr) {

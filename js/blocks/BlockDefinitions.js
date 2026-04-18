@@ -37,9 +37,10 @@ export const BLOCK_DEFS = {
   place_in_slot: {
     type: 'place_in_slot',
     category: 'action',
-    label: 'PLACE in slot',
+    label: '',
     hasBody: false,
     params: [
+      { name: 'action', type: 'dropdown', options: ['place in slot', 'skip gem'] },
       { name: 'slot', type: 'dropdown', options: [] },
     ],
   },

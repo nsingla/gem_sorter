@@ -85,7 +85,11 @@ export class GameEngine {
       return sum + slot.contents.filter(g => !slot.accepts(g)).length;
     }, 0);
 
-    if (this.conveyor.missedCount + incorrectCount >= level.loseCondition.count) {
+    const sortableMissed = this.conveyor.gems
+      .filter(g => g.state === 'fallen' && this.slots.some(s => s.accepts(g)))
+      .length;
+
+    if (sortableMissed + incorrectCount >= level.loseCondition.count) {
       this.state = 'lost';
       if (this.onStateChange) this.onStateChange(this.state);
       return;

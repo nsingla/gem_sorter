@@ -31,8 +31,8 @@ describe('BLOCK_DEFS — structure', () => {
       assert.equal(def.type, key, `${key}: type field should match key`);
       assert.ok(['condition', 'action', 'flow'].includes(def.category),
         `${key}: invalid category "${def.category}"`);
-      assert.ok(typeof def.label === 'string' && def.label.length > 0,
-        `${key}: label should be non-empty string`);
+      assert.ok(typeof def.label === 'string',
+        `${key}: label should be a string`);
       assert.ok(typeof def.hasBody === 'boolean',
         `${key}: hasBody should be boolean`);
       assert.ok(Array.isArray(def.params),
@@ -92,14 +92,14 @@ describe('BLOCK_DEFS — action blocks', () => {
     assert.equal(def.params.length, 0);
   });
 
-  it('place_in_slot should have a slot dropdown param and no body', () => {
+  it('place_in_slot should have action and slot dropdown params and no body', () => {
     const def = BLOCK_DEFS.place_in_slot;
     assert.equal(def.category, 'action');
     assert.ok(!def.hasBody);
-    assert.equal(def.params.length, 1);
-    assert.equal(def.params[0].name, 'slot');
-    // options are empty because they're populated dynamically from slotOptions
-    assert.deepEqual(def.params[0].options, []);
+    assert.equal(def.params.length, 2);
+    assert.equal(def.params[0].name, 'action');
+    assert.deepEqual(def.params[0].options, ['place in slot', 'skip gem']);
+    assert.equal(def.params[1].name, 'slot');
   });
 });
 

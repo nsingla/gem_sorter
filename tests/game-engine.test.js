@@ -223,10 +223,17 @@ describe('GameEngine — win condition', () => {
 // ---------------------------------------------------------------------------
 
 describe('GameEngine — lose condition', () => {
-  it('should transition to lost when missedCount reaches loseCondition.count', () => {
-    const conveyor = makeMockConveyor({ missedCount: 5 });
+  it('should transition to lost when sortable missed gems reach loseCondition.count', () => {
+    const slot = new Slot({ id: 0, label: 'Red', acceptColor: 'red', x: 0, y: 0 });
+    const fallenGems = Array.from({ length: 5 }, () => {
+      const g = new Gem('red', 'circle');
+      g.state = 'fallen';
+      return g;
+    });
+    const conveyor = makeMockConveyor({ gems: fallenGems });
     const engine = makeEngine({
       conveyor,
+      slots: [slot],
       levelManager: makeMockLevelManager({
         winCondition: { type: 'sort_count', count: 10 },
         loseCondition: { type: 'miss_count', count: 5 },
@@ -250,7 +257,13 @@ describe('GameEngine — lose condition', () => {
     slot.addGem(new Gem('green', 'diamond'));
     slot.addGem(new Gem('yellow', 'star'));
 
-    const conveyor = makeMockConveyor({ missedCount: 2 }); // 2 fell off
+    // 2 red gems fell off (match the slot, so they count as missed)
+    const fallenGems = Array.from({ length: 2 }, () => {
+      const g = new Gem('red', 'circle');
+      g.state = 'fallen';
+      return g;
+    });
+    const conveyor = makeMockConveyor({ gems: fallenGems });
 
     const engine = makeEngine({
       conveyor,
@@ -266,6 +279,31 @@ describe('GameEngine — lose condition', () => {
 
     // 2 missed + 3 incorrect = 5 >= 5 lose threshold
     assert.equal(engine.state, 'lost');
+  });
+
+  it('should NOT count distractor gems falling off as missed', () => {
+    const slot = new Slot({ id: 0, label: 'Red', acceptColor: 'red', x: 0, y: 0 });
+    // 5 blue gems fall off — none match the red slot
+    const fallenGems = Array.from({ length: 5 }, () => {
+      const g = new Gem('blue', 'circle');
+      g.state = 'fallen';
+      return g;
+    });
+    const conveyor = makeMockConveyor({ gems: fallenGems });
+
+    const engine = makeEngine({
+      conveyor,
+      slots: [slot],
+      levelManager: makeMockLevelManager({
+        winCondition: { type: 'sort_count', count: 10 },
+        loseCondition: { type: 'miss_count', count: 5 },
+      }),
+    });
+
+    engine.state = 'running';
+    engine._checkEndConditions();
+
+    assert.equal(engine.state, 'running', 'distractors should not trigger lose');
   });
 });
 

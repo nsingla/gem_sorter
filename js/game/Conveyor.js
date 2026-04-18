@@ -29,7 +29,7 @@ export class Conveyor {
     this.endX = canvasWidth * 0.68;
     this.pickupX = canvasWidth * 0.35;
     this.y = canvasHeight * 0.30;
-    this.height = 70;
+    this.height = 91;
     this.gems = [];
     this.spawnedCount = 0;
     this.missedCount = 0;
@@ -64,7 +64,7 @@ export class Conveyor {
       if (r <= 0) {
         const gem = new Gem(type.color, type.shape);
         gem.x = this.startX;
-        gem.y = this.y - 26;
+        gem.y = this.y + this.height / 2;
         this.gems.push(gem);
         this.spawnedCount++;
         return gem;
@@ -76,7 +76,7 @@ export class Conveyor {
     const zoneStart = this.pickupX - this.pickupZoneWidth / 2;
     const zoneEnd = this.pickupX + this.pickupZoneWidth / 2;
     return this.gems
-      .filter(g => g.state === 'on_belt' && g.x >= zoneStart && g.x <= zoneEnd)
+      .filter(g => g.state === 'on_belt' && !g.skipped && g.x >= zoneStart && g.x <= zoneEnd)
       .sort((a, b) => b.x - a.x)[0] || null;
   }
 

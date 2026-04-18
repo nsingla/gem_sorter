@@ -10,7 +10,6 @@ import assert from 'node:assert/strict';
 
 import { levels } from '../js/levels/levels.js';
 import { BLOCK_DEFS } from '../js/blocks/BlockDefinitions.js';
-import { GEM_COLORS, GEM_SHAPES } from '../js/game/Gem.js';
 
 // ---------------------------------------------------------------------------
 // Schema validation for every level
@@ -24,8 +23,9 @@ describe('Level configs — schema validation', () => {
   it('each level should have all required fields', () => {
     const requiredFields = [
       'id', 'name', 'theme', 'description',
-      'conveyorSpeed', 'gemSpawnInterval', 'gemTypes',
-      'slots', 'availableBlocks',
+      'conveyorSpeed', 'gemSpawnInterval',
+      'sortBy', 'numSlots', 'numDistractors', 'gemWeight', 'distractorWeight',
+      'availableBlocks',
       'winCondition', 'loseCondition',
       'maxGems', 'starThresholds',
     ];
@@ -45,114 +45,35 @@ describe('Level configs — schema validation', () => {
       assert.equal(levels[i].id, i + 1, `Level at index ${i} should have id ${i + 1}`);
     }
   });
-});
 
-// ---------------------------------------------------------------------------
-// Gem types validation
-// ---------------------------------------------------------------------------
-
-describe('Level configs — gem types', () => {
-  it('each level should have at least one gem type', () => {
+  it('sortBy should be a valid sort mode', () => {
+    const validModes = ['color', 'shape', 'color_and_shape'];
     for (const level of levels) {
       assert.ok(
-        level.gemTypes.length >= 1,
-        `Level ${level.id} has no gem types`,
+        validModes.includes(level.sortBy),
+        `Level ${level.id}: invalid sortBy "${level.sortBy}"`,
       );
     }
   });
 
-  it('gem type colors should be valid game colors', () => {
-    const validColors = Object.keys(GEM_COLORS);
+  it('numSlots should be between 1 and 5', () => {
     for (const level of levels) {
-      for (const gt of level.gemTypes) {
-        assert.ok(
-          validColors.includes(gt.color),
-          `Level ${level.id}: invalid gem color "${gt.color}"`,
-        );
-      }
+      assert.ok(level.numSlots >= 1 && level.numSlots <= 5,
+        `Level ${level.id}: numSlots (${level.numSlots}) out of range`);
     }
   });
 
-  it('gem type shapes should be valid game shapes', () => {
+  it('numDistractors should be non-negative', () => {
     for (const level of levels) {
-      for (const gt of level.gemTypes) {
-        assert.ok(
-          GEM_SHAPES.includes(gt.shape),
-          `Level ${level.id}: invalid gem shape "${gt.shape}"`,
-        );
-      }
+      assert.ok(level.numDistractors >= 0,
+        `Level ${level.id}: numDistractors should be >= 0`);
     }
   });
 
-  it('gem type weights should be positive numbers', () => {
+  it('gemWeight should be positive', () => {
     for (const level of levels) {
-      for (const gt of level.gemTypes) {
-        assert.ok(gt.weight > 0, `Level ${level.id}: weight must be > 0`);
-      }
-    }
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Slot configs validation
-// ---------------------------------------------------------------------------
-
-describe('Level configs — slots', () => {
-  it('each level should have at least one slot', () => {
-    for (const level of levels) {
-      assert.ok(
-        level.slots.length >= 1,
-        `Level ${level.id} has no slots`,
-      );
-    }
-  });
-
-  it('slot ids should be sequential starting from 0', () => {
-    for (const level of levels) {
-      for (let i = 0; i < level.slots.length; i++) {
-        assert.equal(
-          level.slots[i].id, i,
-          `Level ${level.id}, slot ${i}: id should be ${i}`,
-        );
-      }
-    }
-  });
-
-  it('slot acceptColor (if set) should be a valid game color', () => {
-    const validColors = Object.keys(GEM_COLORS);
-    for (const level of levels) {
-      for (const slot of level.slots) {
-        if (slot.acceptColor) {
-          assert.ok(
-            validColors.includes(slot.acceptColor),
-            `Level ${level.id}, slot "${slot.label}": invalid acceptColor "${slot.acceptColor}"`,
-          );
-        }
-      }
-    }
-  });
-
-  it('slot acceptShape (if set) should be a valid game shape', () => {
-    for (const level of levels) {
-      for (const slot of level.slots) {
-        if (slot.acceptShape) {
-          assert.ok(
-            GEM_SHAPES.includes(slot.acceptShape),
-            `Level ${level.id}, slot "${slot.label}": invalid acceptShape "${slot.acceptShape}"`,
-          );
-        }
-      }
-    }
-  });
-
-  it('each slot should have a non-empty label', () => {
-    for (const level of levels) {
-      for (const slot of level.slots) {
-        assert.ok(
-          slot.label && slot.label.trim().length > 0,
-          `Level ${level.id}: slot ${slot.id} has empty label`,
-        );
-      }
+      assert.ok(level.gemWeight > 0,
+        `Level ${level.id}: gemWeight should be > 0`);
     }
   });
 });
@@ -241,8 +162,6 @@ describe('Level configs — win/lose conditions', () => {
 
   it('win + lose thresholds should make the level theoretically winnable', () => {
     for (const level of levels) {
-      // With maxGems total, you can miss at most (loseCondition.count - 1)
-      // So you have at least (maxGems - loseCondition.count + 1) gems to sort correctly
       const maxSortable = level.maxGems - level.loseCondition.count + 1;
       assert.ok(
         maxSortable >= level.winCondition.count,
@@ -314,8 +233,8 @@ describe('Level configs — difficulty progression', () => {
   });
 
   it('number of slots should generally increase across levels', () => {
-    const firstSlots = levels[0].slots.length;
-    const lastSlots = levels[levels.length - 1].slots.length;
+    const firstSlots = levels[0].numSlots;
+    const lastSlots = levels[levels.length - 1].numSlots;
     assert.ok(lastSlots >= firstSlots,
       `Last level should have at least as many slots as the first`);
   });

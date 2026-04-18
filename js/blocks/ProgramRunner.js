@@ -83,6 +83,14 @@ export class ProgramRunner {
         }
 
         case 'place_in_slot': {
+          if (instr.action === 'skip gem') {
+            const gem = this.conveyor.getGemInPickupZone();
+            if (!gem) return;
+            gem.skipped = true;
+            this.pc++;
+            break;
+          }
+
           const slotIdx = parseInt(instr.slot) - 1;
           const slot = this.slots[slotIdx];
           if (!slot || !this.arm.heldGem) { this.pc++; break; }

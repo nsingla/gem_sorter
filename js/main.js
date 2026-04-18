@@ -58,6 +58,7 @@ class App {
           this.levelManager.currentLevelIndex,
           this.canvas.width,
           this.canvas.height,
+          { regenerate: false },
         );
         if (result) {
           this.conveyor.configure(this.levelManager.currentLevel, this.canvas.width, this.canvas.height);
@@ -185,6 +186,7 @@ class App {
       this.levelManager.currentLevelIndex,
       this.canvas.width,
       this.canvas.height,
+      { regenerate: false },
     );
     if (!result) return;
 
@@ -250,7 +252,10 @@ class App {
       sum + slot.contents.filter(g => slot.accepts(g)).length, 0);
     const incorrectCount = this.engine.slots.reduce((sum, slot) =>
       sum + slot.contents.filter(g => !slot.accepts(g)).length, 0);
-    const missedCount = this.conveyor.missedCount + incorrectCount;
+    const sortableMissed = this.conveyor.gems
+      .filter(g => g.state === 'fallen' && this.engine.slots.some(s => s.accepts(g)))
+      .length;
+    const missedCount = sortableMissed + incorrectCount;
     const gemsRemaining = Math.max(0, this.levelManager.currentLevel.maxGems - this.conveyor.spawnedCount);
     const stars = this.levelManager.getStars(correctCount);
 

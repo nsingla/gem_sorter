@@ -44,6 +44,7 @@ export class BlockWorkspace {
       }
 
       el.innerHTML = html;
+      this._bindActionToggle(el);
       this.paletteEl.appendChild(el);
     }
   }
@@ -92,7 +93,22 @@ export class BlockWorkspace {
       this._updateHint();
     });
 
+    this._bindActionToggle(el);
+
     return el;
+  }
+
+  _bindActionToggle(el) {
+    const actionSel = el.querySelector('[data-param="action"]');
+    if (!actionSel) return;
+    const slotSel = el.querySelector('[data-param="slot"]');
+    if (!slotSel) return;
+
+    const sync = () => {
+      slotSel.style.display = actionSel.value === 'skip gem' ? 'none' : '';
+    };
+    actionSel.addEventListener('change', sync);
+    sync();
   }
 
   _setupDragListeners() {

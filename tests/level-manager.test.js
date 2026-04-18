@@ -1,8 +1,9 @@
 /**
  * Tests for LevelManager (js/levels/LevelManager.js)
  *
- * LevelManager loads level configs, creates Slot instances with computed
- * positions, calculates star ratings, and tracks progression.
+ * LevelManager loads level configs, dynamically generates gem types and
+ * Slot instances with computed positions, calculates star ratings, and
+ * tracks progression.
  *
  * Note: loadLevel() sets document.body.className for theming,
  * so we need the DOM shim.
@@ -14,15 +15,16 @@ import assert from 'node:assert/strict';
 
 import { LevelManager } from '../js/levels/LevelManager.js';
 import { levels } from '../js/levels/levels.js';
+import { GEM_COLORS, GEM_SHAPES } from '../js/game/Gem.js';
 
 // ---------------------------------------------------------------------------
 // Construction
 // ---------------------------------------------------------------------------
 
 describe('LevelManager — construction', () => {
-  it('should start at level index 0 with no loaded level', () => {
+  it('should start at level index -1 with no loaded level', () => {
     const lm = new LevelManager();
-    assert.equal(lm.currentLevelIndex, 0);
+    assert.equal(lm.currentLevelIndex, -1);
     assert.equal(lm.currentLevel, null);
   });
 
@@ -69,29 +71,81 @@ describe('LevelManager.loadLevel()', () => {
       const result = lm.loadLevel(i, 800, 600);
       assert.equal(
         result.slots.length,
-        levels[i].slots.length,
-        `Level ${i + 1} should have ${levels[i].slots.length} slots`,
+        levels[i].numSlots,
+        `Level ${i + 1} should have ${levels[i].numSlots} slots`,
       );
     }
   });
 
-  it('should create slots with correct acceptance criteria from config', () => {
+  it('should generate gem types with valid colors and shapes', () => {
     const lm = new LevelManager();
-    const result = lm.loadLevel(0, 800, 600); // Level 1: one red slot
+    const validColors = Object.keys(GEM_COLORS);
 
-    const slot = result.slots[0];
-    assert.equal(slot.acceptColor, 'red');
-    assert.equal(slot.acceptShape, null);
-    assert.equal(slot.label, 'Red');
+    for (let i = 0; i < levels.length; i++) {
+      const result = lm.loadLevel(i, 800, 600);
+      for (const gt of result.level.gemTypes) {
+        assert.ok(validColors.includes(gt.color),
+          `Level ${i + 1}: invalid gem color "${gt.color}"`);
+        assert.ok(GEM_SHAPES.includes(gt.shape),
+          `Level ${i + 1}: invalid gem shape "${gt.shape}"`);
+        assert.ok(gt.weight > 0, `Level ${i + 1}: weight must be > 0`);
+      }
+    }
+  });
+
+  it('should generate slots with valid acceptance criteria', () => {
+    const lm = new LevelManager();
+    const validColors = Object.keys(GEM_COLORS);
+
+    for (let i = 0; i < levels.length; i++) {
+      const result = lm.loadLevel(i, 800, 600);
+      for (const slot of result.slots) {
+        if (slot.acceptColor) {
+          assert.ok(validColors.includes(slot.acceptColor),
+            `Level ${i + 1}: invalid slot acceptColor "${slot.acceptColor}"`);
+        }
+        if (slot.acceptShape) {
+          assert.ok(GEM_SHAPES.includes(slot.acceptShape),
+            `Level ${i + 1}: invalid slot acceptShape "${slot.acceptShape}"`);
+        }
+        assert.ok(slot.label && slot.label.trim().length > 0,
+          `Level ${i + 1}: slot should have a non-empty label`);
+      }
+    }
+  });
+
+  it('color sort levels should generate slots with both color and shape', () => {
+    const lm = new LevelManager();
+    for (let i = 0; i < levels.length; i++) {
+      if (levels[i].sortBy !== 'color') continue;
+      const result = lm.loadLevel(i, 800, 600);
+      for (const slot of result.slots) {
+        assert.ok(slot.acceptColor, `Level ${i + 1}: color-sort slot should have acceptColor`);
+        assert.ok(slot.acceptShape, `Level ${i + 1}: color-sort slot should have acceptShape`);
+      }
+    }
+  });
+
+  it('shape sort levels should generate slots with shape but no color', () => {
+    const lm = new LevelManager();
+    for (let i = 0; i < levels.length; i++) {
+      if (levels[i].sortBy !== 'shape') continue;
+      const result = lm.loadLevel(i, 800, 600);
+      for (const slot of result.slots) {
+        assert.equal(slot.acceptColor, null, `Level ${i + 1}: shape-sort slot should not have acceptColor`);
+        assert.ok(slot.acceptShape, `Level ${i + 1}: shape-sort slot should have acceptShape`);
+      }
+    }
   });
 
   it('should generate level-specific options for the workspace', () => {
     const lm = new LevelManager();
-    const result = lm.loadLevel(3, 800, 600); // Level 4: 4 colors, 4 slots
+    const result = lm.loadLevel(3, 800, 600); // Level 4: 4 color slots
 
     assert.equal(result.levelOptions.slotLabels.length, 4);
     assert.equal(result.levelOptions.slotLabels[0].value, '1');
-    assert.deepEqual(result.levelOptions.colors, ['red', 'blue', 'green', 'yellow']);
+    assert.ok(result.levelOptions.colors.length >= 4, 'should have at least 4 colors');
+    assert.ok(result.levelOptions.shapes.length >= 4, 'should have at least 4 shapes');
   });
 
   it('should position slots centered relative to conveyor span', () => {
@@ -99,9 +153,7 @@ describe('LevelManager.loadLevel()', () => {
     const result = lm.loadLevel(1, 800, 600); // Level 2: 2 slots
 
     const [slot1, slot2] = result.slots;
-    // slots should be positioned side-by-side
     assert.ok(slot2.x > slot1.x, 'second slot should be to the right of first');
-    // gap between slots should be 20px
     assert.equal(slot2.x - (slot1.x + slot1.width), 20);
   });
 
@@ -120,6 +172,28 @@ describe('LevelManager.loadLevel()', () => {
     lm.loadLevel(1, 800, 600);
     assert.equal(document.body.className, 'theme-beach');
   });
+
+  it('should preserve generated config when regenerate is false', () => {
+    const lm = new LevelManager();
+    const result1 = lm.loadLevel(0, 800, 600);
+    const colors1 = result1.levelOptions.colors.slice();
+
+    const result2 = lm.loadLevel(0, 800, 600, { regenerate: false });
+    const colors2 = result2.levelOptions.colors.slice();
+
+    assert.deepEqual(colors1, colors2, 'colors should be the same when not regenerating');
+  });
+
+  it('should generate fresh config when regenerate is true', () => {
+    const lm = new LevelManager();
+    const results = [];
+    for (let i = 0; i < 20; i++) {
+      const result = lm.loadLevel(0, 800, 600, { regenerate: true });
+      results.push(result.levelOptions.colors.join(','));
+    }
+    const unique = new Set(results);
+    assert.ok(unique.size > 1, 'at least some regenerated configs should differ');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -129,7 +203,7 @@ describe('LevelManager.loadLevel()', () => {
 describe('LevelManager.getStars()', () => {
   it('should return 0 stars below the first threshold', () => {
     const lm = new LevelManager();
-    lm.loadLevel(0, 800, 600); // thresholds: [3, 5, 7]
+    lm.loadLevel(0, 800, 600); // thresholds: [3, 4, 5]
 
     assert.equal(lm.getStars(0), 0);
     assert.equal(lm.getStars(1), 0);
